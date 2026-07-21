@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<meta name="description" content="UPSSSC PET Study Tracker">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>UPSSSC PET Tracker</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0f172a;--card:#1e293b;--border:#334155;--text:#e2e8f0;--muted:#94a3b8;--accent:#38bdf8;--success:#059669;--warn:#d97706;--danger:#dc2626;--purple:#7c3aed;--pink:#ec4899;--orange:#f59e0b;--red:#ef4444;--blue:#3b82f6;--teal:#14b8a6}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;-webkit-tap-highlight-color:transparent;padding-top:env(safe-area-inset-top);padding-bottom:calc(80px + env(safe-area-inset-bottom))}
+.app{max-width:480px;margin:0 auto;padding:16px;padding-bottom:20px}
+.header{text-align:center;padding:16px 0 8px}
+.header h1{font-size:22px;color:var(--accent);margin-bottom:4px}
+.header p{font-size:12px;color:var(--muted)}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 4px;text-align:center}
+.stat-num{font-size:22px;font-weight:700;color:var(--accent);line-height:1}
+.stat-label{font-size:9px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.5px}
+.stat-card.wide{grid-column:span 2}
+.stat-card.wide .stat-num{color:var(--success)}
+.panel{display:none;animation:fadeIn .3s}
+.panel.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px}
+.card-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.btn{padding:10px 16px;border-radius:10px;border:none;font-weight:600;font-size:13px;cursor:pointer;transition:all .15s;flex:1;text-align:center;user-select:none}
+.btn:active{transform:scale(0.96);filter:brightness(0.9)}
+.btn-start{background:var(--success);color:#fff}
+.btn-pause{background:var(--warn);color:#fff}
+.btn-done{background:var(--success);color:#fff;padding:6px 14px;border-radius:20px;font-size:12px;flex:0}
+.btn-done:disabled{background:var(--border);color:var(--muted);cursor:not-allowed;transform:none}
+.btn-secondary{background:var(--border);color:var(--text)}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-export{background:var(--blue);color:#fff}
+.streak-card{display:flex;align-items:center;gap:12px;padding:14px;background:linear-gradient(135deg,var(--purple),var(--blue));border-radius:14px;margin-bottom:12px}
+.streak-icon{font-size:32px}
+.streak-info{flex:1}
+.streak-title{font-size:14px;font-weight:700}
+.streak-sub{font-size:12px;opacity:.8}
+.streak-num{font-size:28px;font-weight:700}
+.daily-card{background:#0f172a;border:1px solid var(--border);border-radius:14px;padding:14px}
+.daily-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.daily-date{font-size:12px;color:var(--muted)}
+.daily-subject{background:var(--purple);color:#fff;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600}
+.daily-lecture{font-size:18px;font-weight:700;margin-bottom:4px}
+.daily-topic{font-size:13px;color:var(--muted);margin-bottom:12px}
+.daily-actions{display:flex;gap:8px}
+.daily-actions .btn{max-width:none}
+.daily-status{font-size:12px;color:var(--success);margin-top:10px;text-align:center;font-weight:600}
+.rev-list{display:flex;flex-direction:column;gap:8px}
+.rev-item{display:flex;align-items:center;gap:12px;padding:10px 12px;background:#0f172a;border-radius:10px;border:1px solid transparent;cursor:pointer;transition:all .2s}
+.rev-item:active{background:#1e293b}
+.rev-item.done{opacity:.6;border-color:var(--success)}
+.rev-item.done .rev-text{text-decoration:line-through;color:var(--muted)}
+.rev-check{width:22px;height:22px;border-radius:6px;border:2px solid var(--border);background:transparent;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+.rev-check.checked{background:var(--success);border-color:var(--success)}
+.rev-check.checked::after{content:'\2713';color:#fff;font-size:12px;font-weight:700}
+.rev-text{flex:1;font-size:13px}
+.rev-progress-bg{background:#0f172a;height:6px;border-radius:3px;margin-top:10px;overflow:hidden}
+.rev-progress-fill{height:100%;border-radius:3px;background:var(--success);transition:width .4s ease}
+.quiz-input-row{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.quiz-input{flex:1;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:#0f172a;color:var(--text);font-size:14px;outline:none}
+.quiz-input:focus{border-color:var(--accent)}
+.quiz-btn{flex:0;padding:10px 16px}
+.quiz-history{display:flex;flex-direction:column;gap:6px;max-height:150px;overflow-y:auto}
+.quiz-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.quiz-item:last-child{border-bottom:none}
+.quiz-subject{color:var(--muted);font-size:11px}
+.quiz-score{font-weight:700;color:var(--accent)}
+.quiz-avg{display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid var(--border);margin-top:8px;font-size:13px;font-weight:700}
+.weekly-card{background:#0f172a;border:1px solid var(--border);border-radius:14px;padding:14px}
+.weekly-status{font-size:13px;color:var(--muted);margin-bottom:10px;text-align:center}
+.weekly-status.sunday{color:var(--warn);font-weight:600}
+.weekly-input-row{display:flex;gap:8px;align-items:center}
+.weekly-input{flex:1;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:#0f172a;color:var(--text);font-size:14px;outline:none}
+.weekly-input:focus{border-color:var(--accent)}
+.weekly-history{display:flex;flex-direction:column;gap:6px;max-height:120px;overflow-y:auto;margin-top:10px}
+.weekly-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.weekly-item:last-child{border-bottom:none}
+.weekly-week{color:var(--muted);font-size:11px}
+.weekly-score{font-weight:700;color:var(--orange)}
+.notif-card{display:flex;align-items:center;gap:10px;padding:10px;background:#0f172a;border-radius:10px;margin-bottom:8px}
+.notif-time{font-size:16px;font-weight:700;color:var(--accent);min-width:50px}
+.notif-info{flex:1}
+.notif-subject{font-size:13px;font-weight:600}
+.notif-desc{font-size:11px;color:var(--muted)}
+.notif-toggle{width:44px;height:24px;border-radius:12px;background:var(--border);position:relative;cursor:pointer;transition:all .2s;flex-shrink:0}
+.notif-toggle.on{background:var(--success)}
+.notif-toggle::after{content:'';position:absolute;width:20px;height:20px;border-radius:50%;background:#fff;top:2px;left:2px;transition:all .2s}
+.notif-toggle.on::after{left:22px}
+.notif-time-input{width:60px;padding:6px;border-radius:6px;border:1px solid var(--border);background:#0f172a;color:var(--text);font-size:13px;text-align:center;outline:none}
+.notif-time-input:focus{border-color:var(--accent)}
+.subject-row{margin-bottom:14px}
+.subject-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.subject-name{font-weight:600;font-size:13px}
+.subject-meta{font-size:11px;color:var(--muted)}
+.progress-bg{background:#0f172a;height:10px;border-radius:5px;overflow:hidden}
+.progress-fill{height:100%;border-radius:5px;transition:width .6s ease}
+.lecture-list{display:flex;flex-direction:column;gap:6px}
+.lecture-item{display:flex;align-items:center;gap:10px;padding:10px;background:#0f172a;border-radius:10px;border:1px solid transparent;transition:all .2s}
+.lecture-item.done{opacity:.5}
+.lecture-item.done .lec-name{text-decoration:line-through;color:var(--muted)}
+.lecture-item.locked{opacity:.3;cursor:not-allowed}
+.lecture-item.locked .lec-checkbox{cursor:not-allowed}
+.lec-checkbox{width:20px;height:20px;border-radius:6px;border:2px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+.lec-checkbox.checked{background:var(--success);border-color:var(--success)}
+.lec-checkbox.checked::after{content:'\2713';color:#fff;font-size:12px;font-weight:700}
+.lec-info{flex:1;min-width:0}
+.lec-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lec-topic{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lec-lock{font-size:11px;color:var(--warn);flex-shrink:0}
+select{width:100%;padding:10px;border-radius:10px;border:1px solid var(--border);background:#0f172a;color:var(--text);font-size:13px;outline:none;margin-bottom:12px}
+select:focus{border-color:var(--accent)}
+.chart-container{position:relative;height:180px;margin-top:8px}
+.chart-canvas{width:100%;height:100%}
+.pie-chart{display:flex;align-items:center;gap:16px;margin-top:8px}
+.pie-svg{width:120px;height:120px;flex-shrink:0}
+.pie-legend{display:flex;flex-direction:column;gap:6px;flex:1}
+.pie-legend-item{display:flex;align-items:center;gap:8px;font-size:12px}
+.pie-dot{width:10px;height:10px;border-radius:50%}
+.modal-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px}
+.modal-row:last-child{border-bottom:none}
+.modal-actions{display:flex;gap:8px;margin-top:16px}
+.modal-actions .btn{max-width:none}
+.empty-state{text-align:center;padding:30px 20px;color:var(--muted)}
+.empty-state .icon{font-size:40px;margin-bottom:8px}
+.empty-state p{font-size:13px}
+.heatmap{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:10px}
+.heatmap-day{width:100%;aspect-ratio:1;border-radius:4px;background:#0f172a;position:relative}
+.heatmap-day.has-data{background:var(--success)}
+.heatmap-day.has-data.partial{background:var(--warn)}
+.heatmap-tooltip{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:var(--card);border:1px solid var(--border);padding:4px 8px;border-radius:6px;font-size:10px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s;z-index:10}
+.heatmap-day:hover .heatmap-tooltip{opacity:1}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:8px 0;padding-bottom:calc(8px + env(safe-area-inset-bottom));z-index:1000}
+.bottom-nav-btn{flex:1;text-align:center;padding:6px 4px;background:transparent;border:none;color:var(--muted);font-size:10px;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:4px}
+.bottom-nav-btn.active{color:var(--accent)}
+.bottom-nav-btn .icon{font-size:20px}
+.bottom-nav-btn:active{opacity:.7}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.8);display:none;align-items:center;justify-content:center;z-index:2000;padding:20px}
+.modal.show{display:flex}
+.modal-content{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:20px;width:100%;max-width:360px;max-height:80vh;overflow-y:auto}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:16px}
+.save-hint{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;font-size:12px;color:var(--muted);line-height:1.6}
+.save-hint strong{color:var(--accent)}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+@media(min-width:768px){.app{max-width:600px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header"><h1>📚 UPSSSC PET Tracker</h1><p>Batch expires: Jan 15, 2027</p></div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-num" id="stat-total">103</div><div class="stat-label">Total</div></div>
+    <div class="stat-card"><div class="stat-num" id="stat-done">7</div><div class="stat-label">Done</div></div>
+    <div class="stat-card"><div class="stat-num" id="stat-left">96</div><div class="stat-label">Left</div></div>
+    <div class="stat-card"><div class="stat-num" id="stat-days">178</div><div class="stat-label">Days</div></div>
+    <div class="stat-card wide"><div class="stat-num" id="stat-pct">7%</div><div class="stat-label">Progress</div></div>
+    <div class="stat-card wide"><div class="stat-num" id="stat-streak">0</div><div class="stat-label">Day Streak</div></div>
+  </div>
+
+  <div class="panel active" id="panel-today">
+    <div class="streak-card">
+      <div class="streak-icon">🔥</div>
+      <div class="streak-info"><div class="streak-title">Current Streak</div><div class="streak-sub">Keep studying daily!</div></div>
+      <div class="streak-num" id="streak-display">0</div>
+    </div>
+    <div class="card"><div class="card-title">📅 Today\'s Lecture</div><div id="today-lecture"></div></div>
+    <div class="card">
+      <div class="card-title">🔄 Daily Revision</div>
+      <div class="rev-list" id="rev-list"></div>
+      <div class="rev-progress-bg"><div class="rev-progress-fill" id="rev-progress" style="width:0%"></div></div>
+      <div style="text-align:center;margin-top:6px;font-size:11px;color:var(--muted)" id="rev-status">0/5 completed</div>
+    </div>
+    <div class="card"><div class="card-title">📝 Daily Quiz</div><div id="quiz-section"></div></div>
+    <div class="card" id="weekly-card" style="display:none"><div class="card-title">📋 Weekly Test</div><div id="weekly-section"></div></div>
+    <div class="card">
+      <div class="card-title">🔔 Reminders</div>
+      <div id="reminder-list"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">💾 Save App</div>
+      <div class="save-hint">
+        <strong>How to save this app to your phone:</strong><br><br>
+        1. Tap the button below to download the file<br>
+        2. Open your file manager, find "PET_Tracker.html"<br>
+        3. Tap it → it opens in Chrome<br>
+        4. In Chrome, tap ⋮ → "Add to Home screen"<br><br>
+        <strong>Your data saves automatically</strong> inside the browser. It will stay even after closing!
+      </div>
+      <button class="btn btn-export" onclick="downloadApp()" style="width:100%">⬇ Download App File</button>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-subjects">
+    <div class="card"><div class="card-title">📚 All Subjects</div><div id="subjects-list"></div></div>
+    <div class="card"><div class="card-title">📋 Lectures</div><select id="subject-select" onchange="loadLectures()"><option value="">Select a subject...</option></select><div class="lecture-list" id="lecture-list"></div></div>
+  </div>
+
+  <div class="panel" id="panel-stats">
+    <div class="card"><div class="card-title">📊 Subject Distribution</div><div class="pie-chart"><svg class="pie-svg" viewBox="0 0 100 100" id="pie-chart"></svg><div class="pie-legend" id="pie-legend"></div></div></div>
+    <div class="card"><div class="card-title">📈 Monthly Timeline</div><div class="chart-container"><canvas class="chart-canvas" id="monthly-chart"></canvas></div></div>
+    <div class="card"><div class="card-title">📝 Quiz Trend (Last 30 Days)</div><div class="chart-container"><canvas class="chart-canvas" id="quiz-chart"></canvas></div></div>
+    <div class="card"><div class="card-title">🔄 Revision Consistency</div><div class="heatmap" id="heatmap"></div></div>
+    <div class="card"><div class="card-title">🏆 Study Stats</div><div id="study-stats"></div></div>
+  </div>
+</div>
+
+<div class="bottom-nav">
+  <button class="bottom-nav-btn active" onclick="switchTab('today')"><span class="icon">📅</span><span>Today</span></button>
+  <button class="bottom-nav-btn" onclick="switchTab('subjects')"><span class="icon">📚</span><span>Subjects</span></button>
+  <button class="bottom-nav-btn" onclick="switchTab('stats')"><span class="icon">📈</span><span>Stats</span></button>
+</div>
+
+<div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-content"><div class="modal-title" id="modal-title">Details</div><div id="modal-body"></div><div class="modal-actions"><button class="btn btn-start" onclick="closeModal()">Close</button></div></div>
+</div>
+
+<script>
+
+const subjectsData = [
+  {id:'polity',name:'Polity',total:16,completed:7,color:'#7c3aed',lectures:[
+    {n:1,topic:'Constitution Basics',done:true},{n:2,topic:'Preamble & Features',done:true},{n:3,topic:'Fundamental Rights',done:true},
+    {n:4,topic:'Directive Principles',done:true},{n:5,topic:'Fundamental Duties',done:true},{n:6,topic:'Amendment Process',done:true},{n:7,topic:'Federal Structure',done:true},
+    {n:8,topic:'President & VP',done:false},{n:9,topic:'PM & Council',done:false},{n:10,topic:'Parliament',done:false},
+    {n:11,topic:'State Legislature',done:false},{n:12,topic:'Emergency & Amendment',done:false},{n:13,topic:'Judiciary',done:false},
+    {n:14,topic:'Local Government',done:false},{n:15,topic:'Election Commission',done:false},{n:16,topic:'Constitutional Bodies',done:false}
+  ]},
+  {id:'economics',name:'Economics',total:12,completed:0,color:'#059669',lectures:[
+    {n:1,topic:'Basic Concepts',done:false},{n:2,topic:'National Income',done:false},{n:3,topic:'Banking System',done:false},
+    {n:4,topic:'RBI & Monetary Policy',done:false},{n:5,topic:'Budget & Fiscal Policy',done:false},{n:6,topic:'Taxation',done:false},
+    {n:7,topic:'Planning in India',done:false},{n:8,topic:'Poverty & Unemployment',done:false},{n:9,topic:'Inflation',done:false},
+    {n:10,topic:'Foreign Trade',done:false},{n:11,topic:'WTO & IMF',done:false},{n:12,topic:'Economic Reforms',done:false}
+  ]},
+  {id:'physics',name:'Physics',total:8,completed:0,color:'#dc2626',lectures:[
+    {n:1,topic:'Mechanics',done:false},{n:2,topic:'Heat & Thermodynamics',done:false},{n:3,topic:'Waves & Sound',done:false},
+    {n:4,topic:'Light & Optics',done:false},{n:5,topic:'Electricity',done:false},{n:6,topic:'Magnetism',done:false},
+    {n:7,topic:'Modern Physics',done:false},{n:8,topic:'Nuclear Physics',done:false}
+  ]},
+  {id:'chemistry',name:'Chemistry',total:9,completed:0,color:'#d97706',lectures:[
+    {n:1,topic:'Atomic Structure',done:false},{n:2,topic:'Periodic Table',done:false},{n:3,topic:'Chemical Bonding',done:false},
+    {n:4,topic:'Acids Bases Salts',done:false},{n:5,topic:'Metals & Non-metals',done:false},{n:6,topic:'Organic Chemistry',done:false},
+    {n:7,topic:'Environmental Chemistry',done:false},{n:8,topic:'Nuclear Chemistry',done:false},{n:9,topic:'Biochemistry',done:false}
+  ]},
+  {id:'biology',name:'Biology',total:13,completed:0,color:'#ec4899',lectures:[
+    {n:1,topic:'Cell Biology',done:false},{n:2,topic:'Tissues',done:false},{n:3,topic:'Human Body Systems',done:false},
+    {n:4,topic:'Digestive System',done:false},{n:5,topic:'Respiratory System',done:false},{n:6,topic:'Circulatory System',done:false},
+    {n:7,topic:'Nervous System',done:false},{n:8,topic:'Endocrine System',done:false},{n:9,topic:'Reproductive System',done:false},
+    {n:10,topic:'Genetics',done:false},{n:11,topic:'Evolution',done:false},{n:12,topic:'Ecology',done:false},{n:13,topic:'Diseases & Immunity',done:false}
+  ]},
+  {id:'environment',name:'Environment',total:3,completed:0,color:'#10b981',lectures:[
+    {n:1,topic:'Ecosystem & Biodiversity',done:false},{n:2,topic:'Climate Change',done:false},{n:3,topic:'Conservation',done:false}
+  ]},
+  {id:'static_gk',name:'Static GK',total:19,completed:0,color:'#f59e0b',lectures:[
+    {n:1,topic:'Indian Geography',done:false},{n:2,topic:'World Geography',done:false},{n:3,topic:'Indian History Overview',done:false},
+    {n:4,topic:'Indian Polity Facts',done:false},{n:5,topic:'Economics Facts',done:false},{n:6,topic:'Science & Tech',done:false},
+    {n:7,topic:'Sports',done:false},{n:8,topic:'Awards & Honors',done:false},{n:9,topic:'Books & Authors',done:false},
+    {n:10,topic:'Important Days',done:false},{n:11,topic:'Countries & Capitals',done:false},{n:12,topic:'Rivers & Dams',done:false},
+    {n:13,topic:'Mountains & Peaks',done:false},{n:14,topic:'National Parks',done:false},{n:15,topic:'Wildlife Sanctuaries',done:false},
+    {n:16,topic:'Constitutional Facts',done:false},{n:17,topic:'Census & Demographics',done:false},{n:18,topic:'Government Schemes',done:false},{n:19,topic:'Miscellaneous Facts',done:false}
+  ]},
+  {id:'ancient_history',name:'Ancient History',total:12,completed:0,color:'#8b5cf6',lectures:[
+    {n:1,topic:'Prehistoric India',done:false},{n:2,topic:'Indus Valley',done:false},{n:3,topic:'Vedic Period',done:false},
+    {n:4,topic:'Mahajanapadas',done:false},{n:5,topic:'Mauryan Empire',done:false},{n:6,topic:'Post-Mauryan',done:false},
+    {n:7,topic:'Gupta Empire',done:false},{n:8,topic:'Post-Gupta',done:false},{n:9,topic:'Harshavardhana',done:false},
+    {n:10,topic:'Sangam Age',done:false},{n:11,topic:'Architecture & Art',done:false},{n:12,topic:'Religion & Philosophy',done:false}
+  ]},
+  {id:'medieval_history',name:'Medieval History',total:9,completed:0,color:'#ef4444',lectures:[
+    {n:1,topic:'Delhi Sultanate',done:false},{n:2,topic:'Khilji & Tughlaq',done:false},{n:3,topic:'Lodi & Sayyid',done:false},
+    {n:4,topic:'Vijayanagar & Bahmani',done:false},{n:5,topic:'Mughal Empire',done:false},{n:6,topic:'Akbar & Administration',done:false},
+    {n:7,topic:'Later Mughals',done:false},{n:8,topic:'Maratha Empire',done:false},{n:9,topic:'Bhakti & Sufi Movements',done:false}
+  ]},
+  {id:'modern_history',name:'Modern History',total:9,completed:0,color:'#3b82f6',lectures:[
+    {n:1,topic:'Advent of Europeans',done:false},{n:2,topic:'British Expansion',done:false},{n:3,topic:'Revolt of 1857',done:false},
+    {n:4,topic:'Social Reforms',done:false},{n:5,topic:'Freedom Struggle 1885-1905',done:false},{n:6,topic:'Gandhian Era',done:false},
+    {n:7,topic:'Non-Cooperation & Civil Disobedience',done:false},{n:8,topic:'Quit India & INA',done:false},{n:9,topic:'Independence & Partition',done:false}
+  ]}
+];
+
+const schedule = [
+  {date:'2026-07-21',subject:'polity',lec:8,topic:'President & Vice President'},
+  {date:'2026-07-22',subject:'polity',lec:9,topic:'PM & Council of Ministers'},
+  {date:'2026-07-23',subject:'polity',lec:10,topic:'Parliament'},
+  {date:'2026-07-24',subject:'polity',lec:11,topic:'State Legislature'},
+  {date:'2026-07-25',subject:'polity',lec:12,topic:'Emergency & Amendment'},
+  {date:'2026-07-26',subject:'polity',lec:13,topic:'Judiciary'},
+  {date:'2026-07-28',subject:'polity',lec:14,topic:'Local Government'},
+  {date:'2026-07-29',subject:'polity',lec:15,topic:'Election Commission'},
+  {date:'2026-07-30',subject:'polity',lec:16,topic:'Constitutional Bodies'},
+  {date:'2026-08-01',subject:'economics',lec:1,topic:'Basic Concepts'},
+  {date:'2026-08-04',subject:'economics',lec:2,topic:'National Income'},
+  {date:'2026-08-05',subject:'economics',lec:3,topic:'Banking System'},
+  {date:'2026-08-06',subject:'economics',lec:4,topic:'RBI & Monetary Policy'},
+  {date:'2026-08-07',subject:'economics',lec:5,topic:'Budget & Fiscal Policy'},
+  {date:'2026-08-08',subject:'economics',lec:6,topic:'Taxation'},
+  {date:'2026-08-11',subject:'economics',lec:7,topic:'Planning in India'},
+  {date:'2026-08-12',subject:'economics',lec:8,topic:'Poverty & Unemployment'},
+  {date:'2026-08-13',subject:'economics',lec:9,topic:'Inflation'},
+  {date:'2026-08-14',subject:'economics',lec:10,topic:'Foreign Trade'},
+  {date:'2026-08-15',subject:'economics',lec:11,topic:'WTO & IMF'},
+  {date:'2026-08-18',subject:'economics',lec:12,topic:'Economic Reforms'},
+  {date:'2026-08-19',subject:'physics',lec:1,topic:'Mechanics'},
+  {date:'2026-08-20',subject:'physics',lec:2,topic:'Heat & Thermodynamics'},
+  {date:'2026-08-21',subject:'physics',lec:3,topic:'Waves & Sound'},
+  {date:'2026-08-22',subject:'physics',lec:4,topic:'Light & Optics'},
+  {date:'2026-08-25',subject:'physics',lec:5,topic:'Electricity'},
+  {date:'2026-08-26',subject:'physics',lec:6,topic:'Magnetism'},
+  {date:'2026-08-27',subject:'physics',lec:7,topic:'Modern Physics'},
+  {date:'2026-08-28',subject:'physics',lec:8,topic:'Nuclear Physics'},
+  {date:'2026-09-01',subject:'chemistry',lec:1,topic:'Atomic Structure'},
+  {date:'2026-09-02',subject:'chemistry',lec:2,topic:'Periodic Table'},
+  {date:'2026-09-03',subject:'chemistry',lec:3,topic:'Chemical Bonding'},
+  {date:'2026-09-04',subject:'chemistry',lec:4,topic:'Acids Bases Salts'},
+  {date:'2026-09-05',subject:'chemistry',lec:5,topic:'Metals & Non-metals'},
+  {date:'2026-09-08',subject:'chemistry',lec:6,topic:'Organic Chemistry'},
+  {date:'2026-09-09',subject:'chemistry',lec:7,topic:'Environmental Chemistry'},
+  {date:'2026-09-10',subject:'chemistry',lec:8,topic:'Nuclear Chemistry'},
+  {date:'2026-09-11',subject:'chemistry',lec:9,topic:'Biochemistry'},
+  {date:'2026-09-12',subject:'biology',lec:1,topic:'Cell Biology'},
+  {date:'2026-09-15',subject:'biology',lec:2,topic:'Tissues'},
+  {date:'2026-09-16',subject:'biology',lec:3,topic:'Human Body Systems'},
+  {date:'2026-09-17',subject:'biology',lec:4,topic:'Digestive System'},
+  {date:'2026-09-18',subject:'biology',lec:5,topic:'Respiratory System'},
+  {date:'2026-09-19',subject:'biology',lec:6,topic:'Circulatory System'},
+  {date:'2026-09-22',subject:'biology',lec:7,topic:'Nervous System'},
+  {date:'2026-09-23',subject:'biology',lec:8,topic:'Endocrine System'},
+  {date:'2026-09-24',subject:'biology',lec:9,topic:'Reproductive System'},
+  {date:'2026-09-25',subject:'biology',lec:10,topic:'Genetics'},
+  {date:'2026-09-26',subject:'biology',lec:11,topic:'Evolution'},
+  {date:'2026-09-29',subject:'biology',lec:12,topic:'Ecology'},
+  {date:'2026-09-30',subject:'biology',lec:13,topic:'Diseases & Immunity'},
+  {date:'2026-10-01',subject:'environment',lec:1,topic:'Ecosystem & Biodiversity'},
+  {date:'2026-10-02',subject:'environment',lec:2,topic:'Climate Change'},
+  {date:'2026-10-03',subject:'environment',lec:3,topic:'Conservation'},
+  {date:'2026-10-06',subject:'static_gk',lec:1,topic:'Indian Geography'},
+  {date:'2026-10-07',subject:'static_gk',lec:2,topic:'World Geography'},
+  {date:'2026-10-08',subject:'static_gk',lec:3,topic:'Indian History Overview'},
+  {date:'2026-10-09',subject:'static_gk',lec:4,topic:'Indian Polity Facts'},
+  {date:'2026-10-10',subject:'static_gk',lec:5,topic:'Economics Facts'},
+  {date:'2026-10-13',subject:'static_gk',lec:6,topic:'Science & Tech'},
+  {date:'2026-10-14',subject:'static_gk',lec:7,topic:'Sports'},
+  {date:'2026-10-15',subject:'static_gk',lec:8,topic:'Awards & Honors'},
+  {date:'2026-10-16',subject:'static_gk',lec:9,topic:'Books & Authors'},
+  {date:'2026-10-17',subject:'static_gk',lec:10,topic:'Important Days'},
+  {date:'2026-10-20',subject:'static_gk',lec:11,topic:'Countries & Capitals'},
+  {date:'2026-10-21',subject:'static_gk',lec:12,topic:'Rivers & Dams'},
+  {date:'2026-10-22',subject:'static_gk',lec:13,topic:'Mountains & Peaks'},
+  {date:'2026-10-23',subject:'static_gk',lec:14,topic:'National Parks'},
+  {date:'2026-10-24',subject:'static_gk',lec:15,topic:'Wildlife Sanctuaries'},
+  {date:'2026-10-27',subject:'static_gk',lec:16,topic:'Constitutional Facts'},
+  {date:'2026-10-28',subject:'static_gk',lec:17,topic:'Census & Demographics'},
+  {date:'2026-10-29',subject:'static_gk',lec:18,topic:'Government Schemes'},
+  {date:'2026-10-30',subject:'static_gk',lec:19,topic:'Miscellaneous Facts'},
+  {date:'2026-11-03',subject:'ancient_history',lec:1,topic:'Prehistoric India'},
+  {date:'2026-11-04',subject:'ancient_history',lec:2,topic:'Indus Valley'},
+  {date:'2026-11-05',subject:'ancient_history',lec:3,topic:'Vedic Period'},
+  {date:'2026-11-06',subject:'ancient_history',lec:4,topic:'Mahajanapadas'},
+  {date:'2026-11-07',subject:'ancient_history',lec:5,topic:'Mauryan Empire'},
+  {date:'2026-11-10',subject:'ancient_history',lec:6,topic:'Post-Mauryan'},
+  {date:'2026-11-11',subject:'ancient_history',lec:7,topic:'Gupta Empire'},
+  {date:'2026-11-12',subject:'ancient_history',lec:8,topic:'Post-Gupta'},
+  {date:'2026-11-13',subject:'ancient_history',lec:9,topic:'Harshavardhana'},
+  {date:'2026-11-14',subject:'ancient_history',lec:10,topic:'Sangam Age'},
+  {date:'2026-11-17',subject:'ancient_history',lec:11,topic:'Architecture & Art'},
+  {date:'2026-11-18',subject:'ancient_history',lec:12,topic:'Religion & Philosophy'},
+  {date:'2026-11-19',subject:'medieval_history',lec:1,topic:'Delhi Sultanate'},
+  {date:'2026-11-20',subject:'medieval_history',lec:2,topic:'Khilji & Tughlaq'},
+  {date:'2026-11-21',subject:'medieval_history',lec:3,topic:'Lodi & Sayyid'},
+  {date:'2026-11-24',subject:'medieval_history',lec:4,topic:'Vijayanagar & Bahmani'},
+  {date:'2026-11-25',subject:'medieval_history',lec:5,topic:'Mughal Empire'},
+  {date:'2026-11-26',subject:'medieval_history',lec:6,topic:'Akbar & Administration'},
+  {date:'2026-11-27',subject:'medieval_history',lec:7,topic:'Later Mughals'},
+  {date:'2026-11-28',subject:'medieval_history',lec:8,topic:'Maratha Empire'},
+  {date:'2026-12-01',subject:'medieval_history',lec:9,topic:'Bhakti & Sufi Movements'},
+  {date:'2026-12-02',subject:'modern_history',lec:1,topic:'Advent of Europeans'},
+  {date:'2026-12-03',subject:'modern_history',lec:2,topic:'British Expansion'},
+  {date:'2026-12-04',subject:'modern_history',lec:3,topic:'Revolt of 1857'},
+  {date:'2026-12-05',subject:'modern_history',lec:4,topic:'Social Reforms'},
+  {date:'2026-12-08',subject:'modern_history',lec:5,topic:'Freedom Struggle 1885-1905'},
+  {date:'2026-12-09',subject:'modern_history',lec:6,topic:'Gandhian Era'},
+  {date:'2026-12-10',subject:'modern_history',lec:7,topic:'Non-Cooperation & Civil Disobedience'},
+  {date:'2026-12-11',subject:'modern_history',lec:8,topic:'Quit India & INA'},
+  {date:'2026-12-12',subject:'modern_history',lec:9,topic:'Independence & Partition'}
+];
+
+const monthlyPlan = [
+  {month:'Jul',lectures:9,color:'#7c3aed'},
+  {month:'Aug',lectures:16,color:'#059669'},
+  {month:'Sep',lectures:18,color:'#dc2626'},
+  {month:'Oct',lectures:16,color:'#d97706'},
+  {month:'Nov',lectures:19,color:'#f59e0b'},
+  {month:'Dec',lectures:21,color:'#ef4444'},
+  {month:'Jan',lectures:4,color:'#3b82f6'}
+];
+
+const revisionItems = [
+  {id:'rev_notes',text:"Revise today's lecture notes"},
+  {id:'rev_mistakes',text:"Review yesterday's quiz mistakes"},
+  {id:'rev_ca',text:'Current Affairs (10 mins)'},
+  {id:'rev_formulas',text:'Formula / Date sheet revision'},
+  {id:'rev_prev',text:'Previous subject quick revision'}
+];
+
+let db = null;
+let currentPanel = 'today';
+let resizeTimeout = null;
+
+function getLocalDateStr() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + day;
+}
+
+function getTodaySchedule() {
+  const today = getLocalDateStr();
+  return schedule.find(s => s.date === today);
+}
+
+function isSunday() {
+  return new Date().getDay() === 0;
+}
+
+function getWeekNumber(d) {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+}
+
+function initDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('PETTrackerDB', 2);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => { db = request.result; resolve(db); };
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      const oldVersion = e.oldVersion;
+      if (!db.objectStoreNames.contains('progress')) db.createObjectStore('progress', {keyPath: 'id'});
+      if (!db.objectStoreNames.contains('streak')) db.createObjectStore('streak', {keyPath: 'date'});
+      if (!db.objectStoreNames.contains('quiz')) db.createObjectStore('quiz', {keyPath: 'id'});
+      if (!db.objectStoreNames.contains('weekly')) db.createObjectStore('weekly', {keyPath: 'week'});
+      if (!db.objectStoreNames.contains('revision')) db.createObjectStore('revision', {keyPath: 'date'});
+      console.log('DB upgraded from v' + oldVersion + ' to v2');
+    };
+  });
+}
+
+function dbPromise(storeName, mode, operation) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, mode);
+    const store = tx.objectStore(storeName);
+    const req = operation(store);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+    tx.oncomplete = () => {};
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function saveProgress(subjectId, lectureNum, done) {
+  await dbPromise('progress', 'readwrite', s => s.put({
+    id: subjectId + '_' + lectureNum, subject: subjectId, lecture: lectureNum, done: done, timestamp: Date.now()
+  }));
+}
+
+async function loadProgress() {
+  const data = await dbPromise('progress', 'readonly', s => s.getAll());
+  data.forEach(r => {
+    const subj = subjectsData.find(s => s.id === r.subject);
+    if (subj && subj.lectures[r.lecture - 1]) subj.lectures[r.lecture - 1].done = r.done;
+  });
+  subjectsData.forEach(s => { s.completed = s.lectures.filter(l => l.done).length; });
+}
+
+async function saveStreak(date) {
+  await dbPromise('streak', 'readwrite', s => s.put({date, count: 1}));
+}
+
+async function getStreak() {
+  const all = await dbPromise('streak', 'readonly', s => s.getAll());
+  const dates = all.map(d => d.date).sort();
+  if (dates.length === 0) return 0;
+  let streak = 0;
+  const today = getLocalDateStr();
+  let checkDate = new Date();
+  const todayDone = dates.includes(today);
+  if (!todayDone) checkDate.setDate(checkDate.getDate() - 1);
+  for (let i = 0; i < 365; i++) {
+    const y = checkDate.getFullYear();
+    const m = String(checkDate.getMonth() + 1).padStart(2, '0');
+    const d = String(checkDate.getDate()).padStart(2, '0');
+    const dateStr = y + '-' + m + '-' + d;
+    if (dates.includes(dateStr)) { streak++; checkDate.setDate(checkDate.getDate() - 1); }
+    else break;
+  }
+  return streak;
+}
+
+async function saveQuiz(date, subject, score, total) {
+  await dbPromise('quiz', 'readwrite', s => s.put({
+    id: date + '_' + subject, date, subject, score, total, timestamp: Date.now()
+  }));
+}
+
+async function getQuizHistory() {
+  return await dbPromise('quiz', 'readonly', s => s.getAll());
+}
+
+async function getTodayQuiz() {
+  const today = getLocalDateStr();
+  const all = await getQuizHistory();
+  return all.find(q => q.date === today);
+}
+
+async function saveWeeklyTest(week, score, total) {
+  await dbPromise('weekly', 'readwrite', s => s.put({week, score, total, timestamp: Date.now()}));
+}
+
+async function getWeeklyTests() {
+  return await dbPromise('weekly', 'readonly', s => s.getAll());
+}
+
+async function saveRevision(date, items) {
+  await dbPromise('revision', 'readwrite', s => s.put({date, items, timestamp: Date.now()}));
+}
+
+async function getRevision(date) {
+  return await dbPromise('revision', 'readonly', s => s.get(date));
+}
+
+async function getAllRevisions() {
+  return await dbPromise('revision', 'readonly', s => s.getAll());
+}
+
+function switchTab(panel) {
+  currentPanel = panel;
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.bottom-nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + panel).classList.add('active');
+  const navMap = {today:0, subjects:1, stats:2};
+  document.querySelectorAll('.bottom-nav-btn')[navMap[panel]].classList.add('active');
+  if (panel === 'stats') renderStats();
+  if (panel === 'subjects') renderSubjects();
+}
+
+function updateStats() {
+  const total = subjectsData.reduce((a, s) => a + s.total, 0);
+  const done = subjectsData.reduce((a, s) => a + s.completed, 0);
+  const left = total - done;
+  const pct = Math.round((done / total) * 100);
+  const endDate = new Date('2027-01-15');
+  const today = new Date();
+  const daysLeft = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-done').textContent = done;
+  document.getElementById('stat-left').textContent = left;
+  document.getElementById('stat-days').textContent = Math.max(0, daysLeft);
+  document.getElementById('stat-pct').textContent = pct + '%';
+  getStreak().then(s => {
+    document.getElementById('stat-streak').textContent = s;
+    document.getElementById('streak-display').textContent = s;
+  });
+}
+
+function renderTodayLecture() {
+  const todaySched = getTodaySchedule();
+  const container = document.getElementById('today-lecture');
+  if (!todaySched) {
+    container.innerHTML = '<div class="daily-card"><div class="empty-state"><div class="icon">🎉</div><p>No lecture scheduled today. Rest or revise!</p></div></div>';
+    return;
+  }
+  const subj = subjectsData.find(s => s.id === todaySched.subject);
+  const lec = subj.lectures[todaySched.lec - 1];
+  const isDone = lec.done;
+  const dateStr = new Date().toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+  container.innerHTML = `
+    <div class="daily-card">
+      <div class="daily-header"><span class="daily-date">${dateStr}</span><span class="daily-subject" style="background:${subj.color}">${subj.name}</span></div>
+      <div class="daily-lecture">Lecture ${todaySched.lec}</div>
+      <div class="daily-topic">${todaySched.topic}</div>
+      <div class="daily-actions">
+        <button class="btn btn-start" id="btn-mark-done" ${isDone ? 'disabled' : ''} onclick="markTodayDone()">${isDone ? '✓ Completed' : '✓ Mark Done'}</button>
+        <button class="btn btn-pause" onclick="showLectureDetail()">📖 Details</button>
+      </div>
+      ${isDone ? '<div class="daily-status">🎉 Great job! Come back tomorrow for the next lecture.</div>' : ''}
+    </div>`;
+}
+
+async function markTodayDone() {
+  const todaySched = getTodaySchedule();
+  if (!todaySched) return;
+  const subj = subjectsData.find(s => s.id === todaySched.subject);
+  const lec = subj.lectures[todaySched.lec - 1];
+  if (lec.done) { alert('Already completed!'); return; }
+  lec.done = true;
+  subj.completed++;
+  await saveProgress(todaySched.subject, todaySched.lec, true);
+  await saveStreak(getLocalDateStr());
+  updateStats();
+  renderTodayLecture();
+  renderSubjects();
+  renderQuizSection();
+  renderRevision();
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try { new Notification('✅ Lecture Complete!', {body: subj.name + ' L' + todaySched.lec + ' done. Great job!'}); } catch(e) {}
+  }
+}
+
+function showLectureDetail() {
+  const todaySched = getTodaySchedule();
+  if (!todaySched) return;
+  const subj = subjectsData.find(s => s.id === todaySched.subject);
+  document.getElementById('modal-title').textContent = subj.name + ' - Lecture ' + todaySched.lec;
+  document.getElementById('modal-body').innerHTML = `
+    <div class="modal-row"><span>Topic</span><span>${todaySched.topic}</span></div>
+    <div class="modal-row"><span>Subject</span><span>${subj.name}</span></div>
+    <div class="modal-row"><span>Total Lectures</span><span>${subj.total}</span></div>
+    <div class="modal-row"><span>Completed</span><span>${subj.completed}/${subj.total}</span></div>
+    <div class="modal-row"><span>Remaining</span><span>${subj.total - subj.completed}</span></div>`;
+  document.getElementById('modal').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('show');
+}
+
+async function renderRevision() {
+  const today = getLocalDateStr();
+  const saved = await getRevision(today);
+  const items = saved ? saved.items : {};
+  const completed = Object.values(items).filter(v => v).length;
+  const pct = Math.round((completed / revisionItems.length) * 100);
+  const list = document.getElementById('rev-list');
+  list.innerHTML = revisionItems.map(item => {
+    const done = items[item.id] || false;
+    return `<div class="rev-item ${done ? 'done' : ''}" onclick="toggleRevision('${item.id}')"><div class="rev-check ${done ? 'checked' : ''}"></div><span class="rev-text">${item.text}</span></div>`;
+  }).join('');
+  document.getElementById('rev-progress').style.width = pct + '%';
+  document.getElementById('rev-status').textContent = completed + '/' + revisionItems.length + ' completed (' + pct + '%)';
+}
+
+async function toggleRevision(itemId) {
+  const today = getLocalDateStr();
+  const saved = await getRevision(today);
+  const items = saved ? {...saved.items} : {};
+  items[itemId] = !items[itemId];
+  await saveRevision(today, items);
+  renderRevision();
+}
+
+async function renderQuizSection() {
+  const todaySched = getTodaySchedule();
+  const container = document.getElementById('quiz-section');
+  if (!todaySched) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">📚</div><p>No lecture today. No quiz needed!</p></div>';
+    return;
+  }
+  const subj = subjectsData.find(s => s.id === todaySched.subject);
+  const lec = subj.lectures[todaySched.lec - 1];
+  if (!lec.done) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">📝</div><p>Complete today\'s lecture to unlock quiz</p></div>';
+    return;
+  }
+  const todayQuiz = await getTodayQuiz();
+  const history = await getQuizHistory();
+  const recent = history.slice(-7).reverse();
+  let html = '';
+  if (todayQuiz) {
+    html += `<div style="text-align:center;padding:12px;background:#0f172a;border-radius:10px;margin-bottom:10px"><div style="font-size:24px;font-weight:700;color:var(--accent)">${todayQuiz.score}/${todayQuiz.total}</div><div style="font-size:12px;color:var(--muted)">Today\'s Quiz (${subj.name})</div></div>`;
+  } else {
+    html += `<div class="quiz-input-row"><input type="number" class="quiz-input" id="quiz-score" placeholder="Score (e.g. 23)" min="0" max="25"><span style="color:var(--muted);font-size:14px">/ 25</span><button class="btn btn-start quiz-btn" onclick="saveTodayQuiz()">Save</button></div>`;
+  }
+  if (recent.length > 0) {
+    html += '<div style="font-size:12px;color:var(--muted);margin-bottom:6px">Recent quizzes:</div>';
+    html += '<div class="quiz-history">' + recent.map(q => `<div class="quiz-item"><span><span class="quiz-subject">${q.subject}</span> ${new Date(q.date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span><span class="quiz-score">${q.score}/${q.total}</span></div>`).join('') + '</div>';
+    const avg = Math.round(recent.reduce((a,q) => a + (q.score/q.total)*100, 0) / recent.length);
+    html += `<div class="quiz-avg"><span>Avg (last 7)</span><span>${avg}%</span></div>`;
+  }
+  container.innerHTML = html;
+}
+
+async function saveTodayQuiz() {
+  const scoreInput = document.getElementById('quiz-score');
+  if (!scoreInput) return;
+  const score = parseInt(scoreInput.value);
+  if (isNaN(score) || score < 0 || score > 25) { alert('Enter a valid score (0-25)'); return; }
+  const todaySched = getTodaySchedule();
+  const subj = subjectsData.find(s => s.id === todaySched.subject);
+  await saveQuiz(getLocalDateStr(), subj.name, score, 25);
+  renderQuizSection();
+}
+
+async function renderWeeklyTest() {
+  const card = document.getElementById('weekly-card');
+  const container = document.getElementById('weekly-section');
+  if (!isSunday()) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  const tests = await getWeeklyTests();
+  const weekNum = getWeekNumber(new Date());
+  const todayTest = tests.find(t => t.week === weekNum);
+  let html = '<div class="weekly-card">';
+  html += '<div class="weekly-status sunday">📅 Sunday — Weekly Test Day!</div>';
+  if (todayTest) {
+    html += `<div style="text-align:center;padding:12px;background:#0f172a;border-radius:10px;margin-bottom:10px"><div style="font-size:24px;font-weight:700;color:var(--orange)">${todayTest.score}/${todayTest.total}</div><div style="font-size:12px;color:var(--muted)">This Week\'s Score</div></div>`;
+  } else {
+    html += `<div class="weekly-input-row"><input type="number" class="weekly-input" id="weekly-score" placeholder="Score" min="0"><span style="color:var(--muted);font-size:14px">/ 100</span><button class="btn btn-start" onclick="saveWeekly()">Save</button></div>`;
+  }
+  if (tests.length > 0) {
+    html += '<div style="font-size:12px;color:var(--muted);margin:10px 0 6px">Past tests:</div>';
+    html += '<div class="weekly-history">' + tests.slice().reverse().map(t => `<div class="weekly-item"><span><span class="weekly-week">Week ${t.week}</span></span><span class="weekly-score">${t.score}/${t.total}</span></div>`).join('') + '</div>';
+  }
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+async function saveWeekly() {
+  const input = document.getElementById('weekly-score');
+  if (!input) return;
+  const score = parseInt(input.value);
+  if (isNaN(score) || score < 0) { alert('Enter a valid score'); return; }
+  await saveWeeklyTest(getWeekNumber(new Date()), score, 100);
+  renderWeeklyTest();
+}
+
+function renderReminders() {
+  const defaultReminders = [
+    {id:'rem1',time:'08:00',title:'Morning Study',desc:'Start your daily lecture'},
+    {id:'rem2',time:'20:00',title:'Evening Revision',desc:'Review today\'s quiz mistakes'},
+    {id:'rem3',time:'21:00',title:'Weekly Test',desc:'Sunday batch test reminder'}
+  ];
+
+  // Load saved times from localStorage
+  defaultReminders.forEach(r => {
+    const savedTime = localStorage.getItem('rem_time_' + r.id);
+    if (savedTime) r.time = savedTime;
+  });
+
+  document.getElementById('reminder-list').innerHTML = defaultReminders.map(r => {
+    const saved = localStorage.getItem('rem_on_' + r.id);
+    const isOn = saved === '1';
+    return `
+      <div class="notif-card">
+        <input type="time" class="notif-time-input" value="${r.time}" onchange="updateReminderTime('${r.id}', this.value)">
+        <div class="notif-info">
+          <div class="notif-subject">${r.title}</div>
+          <div class="notif-desc">${r.desc}</div>
+        </div>
+        <div class="notif-toggle ${isOn ? 'on' : ''}" data-id="${r.id}" onclick="toggleReminder(this)"></div>
+      </div>
+    `;
+  }).join('');
+}
+
+function updateReminderTime(id, newTime) {
+  localStorage.setItem('rem_time_' + id, newTime);
+  renderReminders();
+}
+
+function toggleReminder(el) {
+  el.classList.toggle('on');
+  const id = el.dataset.id;
+  const isOn = el.classList.contains('on');
+  localStorage.setItem('rem_on_' + id, isOn ? '1' : '0');
+  if (isOn && 'Notification' in window) Notification.requestPermission();
+}
+
+function checkReminders() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+  const timeStr = h + ':' + m;
+  if (now.getSeconds() !== 0) return;
+
+  const defaultReminders = [
+    {id:'rem1',time:'08:00',title:'Morning Study'},
+    {id:'rem2',time:'20:00',title:'Evening Revision'},
+    {id:'rem3',time:'21:00',title:'Weekly Test'}
+  ];
+
+  defaultReminders.forEach(r => {
+    const savedTime = localStorage.getItem('rem_time_' + r.id);
+    const checkTime = savedTime || r.time;
+    const isOn = localStorage.getItem('rem_on_' + r.id) === '1';
+    if (isOn && checkTime === timeStr && 'Notification' in window && Notification.permission === 'granted') {
+      try { new Notification('⏰ ' + r.title, {body: 'Time to study!'}); } catch(e) {}
+    }
+  });
+}
+
+function renderSubjects() {
+  const container = document.getElementById('subjects-list');
+  container.innerHTML = subjectsData.map(s => {
+    const pct = Math.round((s.completed / s.total) * 100);
+    return `<div class="subject-row"><div class="subject-header"><span class="subject-name" style="color:${s.color}">${s.name}</span><span class="subject-meta">${s.completed}/${s.total} (${pct}%)</span></div><div class="progress-bg"><div class="progress-fill" style="width:${pct}%;background:${s.color}"></div></div></div>`;
+  }).join('');
+  const select = document.getElementById('subject-select');
+  select.innerHTML = '<option value="">Select a subject...</option>' + subjectsData.map(s => `<option value="${s.id}">${s.name} (${s.completed}/${s.total})</option>`).join('');
+}
+
+function loadLectures() {
+  const subjId = document.getElementById('subject-select').value;
+  const container = document.getElementById('lecture-list');
+  if (!subjId) { container.innerHTML = '<div class="empty-state"><p>Select a subject</p></div>'; return; }
+  const subj = subjectsData.find(s => s.id === subjId);
+  const todaySched = getTodaySchedule();
+  const todayLecNum = todaySched && todaySched.subject === subjId ? todaySched.lec : null;
+  container.innerHTML = subj.lectures.map((l, i) => {
+    const isToday = l.n === todayLecNum;
+    const locked = !l.done && !isToday;
+    return `<div class="lecture-item ${l.done ? 'done' : ''} ${locked ? 'locked' : ''}"><div class="lec-checkbox ${l.done ? 'checked' : ''}" ${locked ? '' : 'onclick="toggleLecture(\'' + subjId + '\',' + i + ')"'}></div><div class="lec-info"><div class="lec-name">Lecture ${l.n} ${isToday ? '<span style="color:var(--accent)">(Today)</span>' : ''}</div><div class="lec-topic">${l.topic}</div></div>${locked ? '<span class="lec-lock">🔒</span>' : ''}</div>`;
+  }).join('');
+}
+
+async function toggleLecture(subjId, idx) {
+  const subj = subjectsData.find(s => s.id === subjId);
+  const lec = subj.lectures[idx];
+  const todaySched = getTodaySchedule();
+  if (todaySched && todaySched.subject === subjId && todaySched.lec === lec.n) {
+    // OK - today's lecture
+  } else if (!lec.done) {
+    alert('You can only mark TODAY\'s lecture as done. One lecture per day!');
+    return;
+  }
+  lec.done = !lec.done;
+  subj.completed = subj.lectures.filter(l => l.done).length;
+  await saveProgress(subjId, lec.n, lec.done);
+  if (lec.done && todaySched && todaySched.subject === subjId && todaySched.lec === lec.n) {
+    await saveStreak(getLocalDateStr());
+  }
+  updateStats();
+  renderTodayLecture();
+  renderSubjects();
+  loadLectures();
+}
+
+function downloadApp() {
+  const html = document.documentElement.outerHTML;
+  const blob = new Blob([html], {type: 'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'PET_Tracker.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  alert('File downloaded! Check your Downloads folder.');
+}
+
+function drawBarChart(canvasId, labels, values, colors) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+  const w = rect.width, h = rect.height;
+  ctx.clearRect(0, 0, w, h);
+  const max = Math.max(...values) || 1;
+  const barW = (w - 40) / values.length - 8;
+  const startX = 30;
+  values.forEach((v, i) => {
+    const barH = (v / max) * (h - 50);
+    const x = startX + i * (barW + 12);
+    const y = h - 30 - barH;
+    ctx.fillStyle = colors[i] || '#38bdf8';
+    ctx.beginPath();
+    ctx.roundRect(x, y, barW, barH, 4);
+    ctx.fill();
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(v, x + barW / 2, y - 6);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '10px sans-serif';
+    ctx.fillText(labels[i], x + barW / 2, h - 10);
+  });
+}
+
+function drawLineChart(canvasId, labels, values, color) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+  const w = rect.width, h = rect.height;
+  ctx.clearRect(0, 0, w, h);
+  const max = Math.max(...values, 25) || 25;
+  const min = 0;
+  const range = max - min;
+  const padX = 30, padY = 30;
+  const graphW = w - padX * 2;
+  const graphH = h - padY * 2;
+
+  if (values.length < 2) {
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Not enough data yet', w/2, h/2);
+    return;
+  }
+
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 4; i++) {
+    const y = padY + (graphH / 4) * i;
+    ctx.beginPath();
+    ctx.moveTo(padX, y);
+    ctx.lineTo(w - padX, y);
+    ctx.stroke();
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '9px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(Math.round(max - (range / 4) * i), padX - 4, y + 3);
+  }
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  values.forEach((v, i) => {
+    const x = padX + (i / (values.length - 1)) * graphW;
+    const y = padY + graphH - ((v - min) / range) * graphH;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  ctx.fillStyle = color;
+  values.forEach((v, i) => {
+    const x = padX + (i / (values.length - 1)) * graphW;
+    const y = padY + graphH - ((v - min) / range) * graphH;
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '9px sans-serif';
+  ctx.textAlign = 'center';
+  labels.forEach((l, i) => {
+    const x = padX + (i / (labels.length - 1)) * graphW;
+    ctx.fillText(l, x, h - 8);
+  });
+}
+
+function drawPieChart() {
+  const svg = document.getElementById('pie-chart');
+  const legend = document.getElementById('pie-legend');
+  const total = subjectsData.reduce((a, s) => a + s.total, 0);
+  let cumulative = 0;
+  const radius = 40;
+  const cx = 50, cy = 50;
+  let paths = '';
+  subjectsData.forEach(s => {
+    const angle = (s.total / total) * 2 * Math.PI;
+    const x1 = cx + radius * Math.cos(cumulative);
+    const y1 = cy + radius * Math.sin(cumulative);
+    const x2 = cx + radius * Math.cos(cumulative + angle);
+    const y2 = cy + radius * Math.sin(cumulative + angle);
+    const largeArc = angle > Math.PI ? 1 : 0;
+    paths += '<path d="M ' + cx + ' ' + cy + ' L ' + x1 + ' ' + y1 + ' A ' + radius + ' ' + radius + ' 0 ' + largeArc + ' 1 ' + x2 + ' ' + y2 + ' Z" fill="' + s.color + '" stroke="#0f172a" stroke-width="1"/>';
+    cumulative += angle;
+  });
+  svg.innerHTML = paths;
+  legend.innerHTML = subjectsData.map(s => '<div class="pie-legend-item"><div class="pie-dot" style="background:' + s.color + '"></div><span>' + s.name + ' (' + s.total + ')</span></div>').join('');
+}
+
+async function renderStats() {
+  drawPieChart();
+  drawBarChart('monthly-chart', monthlyPlan.map(m => m.month), monthlyPlan.map(m => m.lectures), monthlyPlan.map(m => m.color));
+
+  const quizzes = await getQuizHistory();
+  const last30 = quizzes.slice(-30);
+  const quizLabels = last30.map((q, i) => {
+    const d = new Date(q.date);
+    return String(d.getDate()).padStart(2, '0');
+  });
+  const quizValues = last30.map(q => q.score);
+  drawLineChart('quiz-chart', quizLabels, quizValues, '#38bdf8');
+
+  const revisions = await getAllRevisions();
+  const heatmap = document.getElementById('heatmap');
+  const days = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const dateStr = y + '-' + m + '-' + day;
+    const rev = revisions.find(r => r.date === dateStr);
+    const completed = rev ? Object.values(rev.items).filter(v => v).length : 0;
+    const pct = Math.round((completed / 5) * 100);
+    days.push({date: dateStr, pct, day: d.getDate()});
+  }
+  heatmap.innerHTML = days.map(d => {
+    let cls = '';
+    if (d.pct === 100) cls = 'has-data';
+    else if (d.pct > 0) cls = 'has-data partial';
+    return '<div class="heatmap-day ' + cls + '"><div class="heatmap-tooltip">' + d.date + ': ' + d.pct + '%</div></div>';
+  }).join('');
+
+  const totalLectures = subjectsData.reduce((a, s) => a + s.completed, 0);
+  const totalQuizzes = quizzes.length;
+  const avgQuiz = totalQuizzes > 0 ? Math.round(quizzes.reduce((a, q) => a + (q.score / q.total) * 100, 0) / totalQuizzes) : 0;
+  const totalRevs = revisions.length;
+  const fullRevs = revisions.filter(r => Object.values(r.items).filter(v => v).length === 5).length;
+  document.getElementById('study-stats').innerHTML = `
+    <div class="modal-row"><span>Total Lectures Done</span><span>${totalLectures}/103</span></div>
+    <div class="modal-row"><span>Quizzes Taken</span><span>${totalQuizzes}</span></div>
+    <div class="modal-row"><span>Avg Quiz Score</span><span>${avgQuiz}%</span></div>
+    <div class="modal-row"><span>Revision Days</span><span>${totalRevs}</span></div>
+    <div class="modal-row"><span>Full Revision Days</span><span>${fullRevs}</span></div>
+  `;
+}
+
+async function init() {
+  try {
+    await initDB();
+    await loadProgress();
+    updateStats();
+    renderTodayLecture();
+    renderSubjects();
+    renderRevision();
+    renderQuizSection();
+    renderWeeklyTest();
+    renderReminders();
+    setInterval(checkReminders, 1000);
+    if ('Notification' in window) Notification.requestPermission();
+
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        if (currentPanel === 'stats') renderStats();
+      }, 200);
+    });
+  } catch(e) {
+    console.error('Init error:', e);
+  }
+}
+
+init();
+</script>
+</body>
+</html>
