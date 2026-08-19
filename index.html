@@ -49,6 +49,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 .daily-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .daily-date{font-size:11px;color:var(--muted);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.5px}
 .daily-subject{background:var(--purple);color:#fff;padding:4px 12px;border-radius:3px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.daily-subject-select{color:#fff;padding:4px 24px 4px 12px;border-radius:3px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;border:none;-webkit-appearance:none;appearance:none;background-image:linear-gradient(45deg,transparent 50%,#fff 50%),linear-gradient(135deg,#fff 50%,transparent 50%);background-position:calc(100% - 12px) center,calc(100% - 8px) center;background-size:4px 4px,4px 4px;background-repeat:no-repeat;font-family:var(--font-body)}
 .daily-lecture{font-size:17px;font-weight:700;margin-bottom:4px}
 .daily-topic{font-size:13px;color:var(--muted);margin-bottom:12px}
 .daily-actions{display:flex;gap:8px}
@@ -157,13 +158,13 @@ select:focus{border-color:var(--accent)}
 </head>
 <body>
 <div class="app">
-  <div class="header"><h1>📚 UPSSSC PET Tracker</h1><p>Batch expires: Jan 15, 2027</p></div>
+  <div class="header"><h1>📚 My Study Tracker</h1><p>Batch expires: Jan 15, 2027</p></div>
   <div class="stats-grid">
-    <div class="stat-card"><div class="stat-num" id="stat-total">103</div><div class="stat-label">Total</div></div>
-    <div class="stat-card"><div class="stat-num" id="stat-done">7</div><div class="stat-label">Done</div></div>
-    <div class="stat-card"><div class="stat-num" id="stat-left">96</div><div class="stat-label">Left</div></div>
-    <div class="stat-card"><div class="stat-num" id="stat-days">178</div><div class="stat-label">Days</div></div>
-    <div class="stat-card wide"><div class="stat-num" id="stat-pct">7%</div><div class="stat-label">Progress</div></div>
+    <div class="stat-card"><div class="stat-num" id="stat-total">–</div><div class="stat-label">Total</div></div>
+    <div class="stat-card"><div class="stat-num" id="stat-done">–</div><div class="stat-label">Done</div></div>
+    <div class="stat-card"><div class="stat-num" id="stat-left">–</div><div class="stat-label">Left</div></div>
+    <div class="stat-card"><div class="stat-num" id="stat-days">–</div><div class="stat-label">Days</div></div>
+    <div class="stat-card wide"><div class="stat-num" id="stat-pct">–</div><div class="stat-label">Progress</div></div>
     <div class="stat-card wide"><div class="stat-num" id="stat-streak">0</div><div class="stat-label">Day Streak</div></div>
   </div>
 
@@ -214,6 +215,15 @@ select:focus{border-color:var(--accent)}
     </div>
     <div class="card"><div class="card-title">🔄 Revision Consistency</div><div class="heatmap" id="heatmap"></div></div>
     <div class="card"><div class="card-title">🏆 Study Stats</div><div id="study-stats"></div></div>
+    <div class="card">
+      <div class="card-title">💾 Backup &amp; Restore</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">All your data lives only in this browser. Export a backup before switching phones or clearing browser data.</div>
+      <div class="daily-actions">
+        <button class="btn btn-export" onclick="exportData()">⬇ Export Backup</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()">⬆ Restore Backup</button>
+      </div>
+      <input type="file" id="import-file" accept=".json,application/json" style="display:none" onchange="importData(event)">
+    </div>
   </div>
 </div>
 
@@ -416,18 +426,6 @@ let db = null;
 let currentPanel = 'today';
 let resizeTimeout = null;
 
-// ---- Push notification config ----
-const VAPID_PUBLIC_KEY = 'BEVY7iC2WhwwbLgbBtvIkMyv3eTQk2j1ZbGsY1PbjxE-RDydCK-FxzwZjT4CBvwMlY_vyKMadlfg8eG5ess__V4';
-
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; i++) outputArray[i] = rawData.charCodeAt(i);
-  return outputArray;
-}
-
 function getLocalDateStr() {
   const d = new Date();
   const y = d.getFullYear();
@@ -438,31 +436,73 @@ function getLocalDateStr() {
 
 const SUBJECT_ORDER = ['polity', 'economics', 'physics', 'chemistry', 'biology', 'environment', 'static_gk', 'ancient_history', 'medieval_history', 'modern_history'];
 
-function getMasterLectureList() {
-  const list = [];
-  SUBJECT_ORDER.forEach(subjId => {
-    const subj = subjectsData.find(s => s.id === subjId);
-    if (!subj) return;
-    subj.lectures.forEach((l, idx) => list.push({subject: subjId, lec: l.n, topic: l.topic, done: l.done, idx}));
-  });
-  return list;
+// Which subject "Today's Lecture" pulls from. Defaults to the planned order,
+// but the person can switch it any time (their actual coaching classes don't
+// always follow the original plan's subject order) via the dropdown on the
+// Today's Lecture card - that choice is what's saved here.
+// Subject of the most recently completed lecture (from progress timestamps).
+// Used so "Today's Lecture" follows what you're actually studying, even if you
+// never touched the dropdown.
+let lastProgressSubject = null;
+
+function getActiveSubjectId() {
+  const saved = localStorage.getItem('active_subject');
+  if (saved) {
+    const subj = subjectsData.find(s => s.id === saved);
+    if (subj && subj.completed < subj.total) return saved;
+  }
+  if (lastProgressSubject) {
+    const subj = subjectsData.find(s => s.id === lastProgressSubject);
+    if (subj && subj.completed < subj.total) return lastProgressSubject;
+  }
+  for (const id of SUBJECT_ORDER) {
+    const subj = subjectsData.find(s => s.id === id);
+    if (subj && subj.completed < subj.total) return id;
+  }
+  return null; // everything complete
 }
 
-// The lecture that's actually next, based on what's genuinely completed -
-// not which calendar date it is. This is what unlocks "Mark Done", so a
-// missed day never creates a permanent gap, and studying extra on a
-// Saturday/Sunday just pulls the next lecture forward instead of being blocked.
+function setActiveSubject(subjId) {
+  localStorage.setItem('active_subject', subjId);
+  renderTodayLecture();
+  renderQuizSection();
+  renderRevision();
+}
+
+// The lecture that's actually next within the active subject, based on
+// what's genuinely completed - not which calendar date it is, and not
+// forced through every other subject first. This is what unlocks "Mark
+// Done", so a missed day never creates a permanent gap, studying extra on a
+// Saturday/Sunday just pulls it forward, and switching subjects works too.
 function getNextLecture() {
-  const list = getMasterLectureList();
-  return list.find(l => !l.done) || null;
+  const activeId = getActiveSubjectId();
+  if (!activeId) return null;
+  const subj = subjectsData.find(s => s.id === activeId);
+  const idx = subj.lectures.findIndex(l => !l.done);
+  if (idx === -1) return null;
+  return {subject: activeId, lec: subj.lectures[idx].n, topic: subj.lectures[idx].topic, idx};
 }
 
 // The most recently finished lecture - used for quiz context, since a quiz
-// should test what was just studied, not whatever comes next.
+// should test what was just studied, not whatever comes next. Prefers the
+// active subject's own last-done lecture; falls back to a global search for
+// the edge case of having just switched to a subject with nothing done yet.
 function getLastCompletedLecture() {
-  const list = getMasterLectureList();
-  for (let i = list.length - 1; i >= 0; i--) {
-    if (list[i].done) return list[i];
+  const activeId = getActiveSubjectId();
+  if (activeId) {
+    const subj = subjectsData.find(s => s.id === activeId);
+    const nextIdx = subj.lectures.findIndex(l => !l.done);
+    const lastIdx = (nextIdx === -1 ? subj.lectures.length : nextIdx) - 1;
+    if (lastIdx >= 0 && subj.lectures[lastIdx].done) {
+      return {subject: activeId, lec: subj.lectures[lastIdx].n, topic: subj.lectures[lastIdx].topic, idx: lastIdx};
+    }
+  }
+  for (let i = SUBJECT_ORDER.length - 1; i >= 0; i--) {
+    const subj = subjectsData.find(s => s.id === SUBJECT_ORDER[i]);
+    if (!subj) continue;
+    for (let j = subj.lectures.length - 1; j >= 0; j--) {
+      if (subj.lectures[j].done) return {subject: subj.id, lec: subj.lectures[j].n, topic: subj.lectures[j].topic, idx: j};
+    }
   }
   return null;
 }
@@ -486,6 +526,11 @@ function getWeekNumber(d) {
   date.setUTCDate(date.getUTCDate() + 4 - dayNum);
   const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
   return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+}
+
+// Year-qualified key so Week 1 of 2027 doesn't collide with Week 1 of 2026.
+function getWeekKey(d) {
+  return d.getFullYear() + '-W' + String(getWeekNumber(d)).padStart(2, '0');
 }
 
 function initDB() {
@@ -540,11 +585,14 @@ async function saveProgress(subjectId, lectureNum, done) {
 
 async function loadProgress() {
   const data = await dbPromise('progress', 'readonly', s => s.getAll());
+  let latest = null;
   data.forEach(r => {
     const subj = subjectsData.find(s => s.id === r.subject);
     if (subj && subj.lectures[r.lecture - 1]) subj.lectures[r.lecture - 1].done = r.done;
+    if (r.done && (!latest || (r.timestamp || 0) > latest.timestamp)) latest = {subject: r.subject, timestamp: r.timestamp || 0};
   });
   subjectsData.forEach(s => { s.completed = s.lectures.filter(l => l.done).length; });
+  if (latest) lastProgressSubject = latest.subject;
 }
 
 async function saveStreak(date) {
@@ -746,7 +794,7 @@ async function renderSessionSection() {
   const existingNoteEl = document.getElementById('session-note');
   const preservedNote = existingNoteEl ? existingNoteEl.value : '';
   const existingSelectEl = document.getElementById('session-subject-select');
-  const preservedSubject = sessionTimer.subjectId || (existingSelectEl ? existingSelectEl.value : null) || (subjectsData[0] && subjectsData[0].id) || '';
+  const preservedSubject = sessionTimer.subjectId || (existingSelectEl ? existingSelectEl.value : null) || getActiveSubjectId() || (subjectsData[0] && subjectsData[0].id) || '';
 
   const subjectOptions = subjectsData.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
 
@@ -836,9 +884,11 @@ function renderTodayLecture() {
   if (status.diff > 0) paceHtml = `<div style="font-size:11px;color:var(--success);text-align:center;margin-top:8px;font-family:var(--font-mono)">${status.diff} lecture${status.diff > 1 ? 's' : ''} ahead of schedule</div>`;
   else if (status.diff < 0) paceHtml = `<div style="font-size:11px;color:var(--warn);text-align:center;margin-top:8px;font-family:var(--font-mono)">${-status.diff} lecture${-status.diff > 1 ? 's' : ''} behind schedule - pick up whenever you can, including weekends</div>`;
   else paceHtml = `<div style="font-size:11px;color:var(--muted);text-align:center;margin-top:8px;font-family:var(--font-mono)">Right on pace</div>`;
+  const switchableSubjects = subjectsData.filter(s => s.completed < s.total);
+  const subjOptionsHtml = switchableSubjects.map(s => `<option value="${s.id}" ${s.id === next.subject ? 'selected' : ''}>${s.name}</option>`).join('');
   container.innerHTML = `
     <div class="daily-card">
-      <div class="daily-header"><span class="daily-date">${dateStr}</span><span class="daily-subject" style="background:${subj.color}">${subj.name}</span></div>
+      <div class="daily-header"><span class="daily-date">${dateStr}</span><select class="daily-subject-select" style="background:${subj.color}" onchange="setActiveSubject(this.value)">${subjOptionsHtml}</select></div>
       <div class="daily-lecture">Lecture ${next.lec}</div>
       <div class="daily-topic">${next.topic}</div>
       <div class="daily-actions">
@@ -931,7 +981,7 @@ async function renderQuizSection() {
   }
   if (recent.length > 0) {
     html += '<div style="font-size:12px;color:var(--muted);margin-bottom:6px">Recent quizzes:</div>';
-    html += '<div class="quiz-history">' + recent.map(q => `<div class="quiz-item"><span><span class="quiz-subject">${q.subject}</span> ${new Date(q.date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span><span class="quiz-score">${q.score}/${q.total}</span></div>`).join('') + '</div>';
+    html += '<div class="quiz-history">' + recent.map(q => { const qs = subjectsData.find(x => x.id === q.subject || x.name === q.subject); return `<div class="quiz-item"><span><span class="quiz-subject">${qs ? qs.name : q.subject}</span> ${new Date(q.date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span><span class="quiz-score">${q.score}/${q.total}</span></div>`; }).join('') + '</div>';
     const avg = Math.round(recent.reduce((a,q) => a + (q.score/q.total)*100, 0) / recent.length);
     html += `<div class="quiz-avg"><span>Avg (last 7)</span><span>${avg}%</span></div>`;
   }
@@ -945,8 +995,7 @@ async function saveTodayQuiz() {
   if (isNaN(score) || score < 0 || score > 25) { alert('Enter a valid score (0-25)'); return; }
   const last = getLastCompletedLecture();
   if (!last) return;
-  const subj = subjectsData.find(s => s.id === last.subject);
-  await saveQuiz(getLocalDateStr(), subj.name, score, 25);
+  await saveQuiz(getLocalDateStr(), last.subject, score, 25);
   renderQuizSection();
 }
 
@@ -956,8 +1005,8 @@ async function renderWeeklyTest() {
   if (!isSunday()) { card.style.display = 'none'; return; }
   card.style.display = 'block';
   const tests = await getWeeklyTests();
-  const weekNum = getWeekNumber(new Date());
-  const todayTest = tests.find(t => t.week === weekNum);
+  const weekKey = getWeekKey(new Date());
+  const todayTest = tests.find(t => t.week === weekKey || t.week === getWeekNumber(new Date()));
   let html = '<div class="weekly-card">';
   html += '<div class="weekly-status sunday">📅 Sunday — Weekly Test Day!</div>';
   if (todayTest) {
@@ -967,7 +1016,7 @@ async function renderWeeklyTest() {
   }
   if (tests.length > 0) {
     html += '<div style="font-size:12px;color:var(--muted);margin:10px 0 6px">Past tests:</div>';
-    html += '<div class="weekly-history">' + tests.slice().reverse().map(t => `<div class="weekly-item"><span><span class="weekly-week">Week ${t.week}</span></span><span class="weekly-score">${t.score}/${t.total}</span></div>`).join('') + '</div>';
+    html += '<div class="weekly-history">' + tests.slice().reverse().map(t => { const label = typeof t.week === 'string' ? t.week : 'Week ' + t.week; return `<div class="weekly-item"><span><span class="weekly-week">${label}</span></span><span class="weekly-score">${t.score}/${t.total}</span></div>`; }).join('') + '</div>';
   }
   html += '</div>';
   container.innerHTML = html;
@@ -978,7 +1027,7 @@ async function saveWeekly() {
   if (!input) return;
   const score = parseInt(input.value);
   if (isNaN(score) || score < 0) { alert('Enter a valid score'); return; }
-  await saveWeeklyTest(getWeekNumber(new Date()), score, 100);
+  await saveWeeklyTest(getWeekKey(new Date()), score, 100);
   renderWeeklyTest();
 }
 
@@ -988,96 +1037,14 @@ const DEFAULT_REMINDERS = [
   {id:'rem3',time:'21:00',title:'Weekly Test',desc:'Sunday batch test reminder'}
 ];
 
-function getReminderConfigForSync() {
-  const config = {};
-  DEFAULT_REMINDERS.forEach(r => {
-    const time = localStorage.getItem('rem_time_' + r.id) || r.time;
-    const enabled = localStorage.getItem('rem_on_' + r.id) === '1';
-    config[r.id] = {time, enabled, title: r.title, desc: r.desc};
-  });
-  return config;
-}
-
-async function syncRemindersToBackend() {
-  if (localStorage.getItem('push_enabled') !== '1') return;
-  try {
-    await fetch('/api/subscribe', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({reminders: getReminderConfigForSync()})
-    });
-  } catch (e) { console.error('Reminder sync failed:', e); }
-}
-
-async function enableBackgroundReminders() {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    alert('Background push is not supported in this browser. Try Chrome on Android.');
-    return;
-  }
-  if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-    alert('Open this app from its https link (not the downloaded file) to enable background reminders.');
-    return;
-  }
-  try {
-    const reg = await navigator.serviceWorker.register('/sw.js');
-    await navigator.serviceWorker.ready;
-    const perm = await Notification.requestPermission();
-    if (perm !== 'granted') { alert('Notification permission was denied.'); return; }
-    let sub = await reg.pushManager.getSubscription();
-    if (!sub) {
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-      });
-    }
-    await fetch('/api/subscribe', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({subscription: sub.toJSON(), reminders: getReminderConfigForSync()})
-    });
-    localStorage.setItem('push_enabled', '1');
-    renderReminders();
-    alert("Background reminders are on. You'll get notified even with the app closed.");
-  } catch (e) {
-    console.error(e);
-    alert('Could not enable background reminders: ' + e.message);
-  }
-}
-
-async function disableBackgroundReminders() {
-  try {
-    if ('serviceWorker' in navigator) {
-      const reg = await navigator.serviceWorker.getRegistration('/sw.js');
-      if (reg) {
-        const sub = await reg.pushManager.getSubscription();
-        if (sub) {
-          await fetch('/api/subscribe', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({removeEndpoint: sub.endpoint})
-          });
-          await sub.unsubscribe();
-        }
-      }
-    }
-  } catch (e) { console.error(e); }
-  localStorage.setItem('push_enabled', '0');
-  renderReminders();
-}
-
 function renderReminders() {
-  const pushEnabled = localStorage.getItem('push_enabled') === '1';
-  const statusHtml = pushEnabled
-    ? '<div style="display:flex;justify-content:space-between;align-items:center;background:#0B0F14;border-radius:10px;padding:10px 12px;margin-bottom:10px"><span style="font-size:12px;color:var(--success);font-weight:600">✅ Background reminders active</span><button class="btn btn-secondary" style="flex:0;padding:6px 12px;font-size:11px" onclick="disableBackgroundReminders()">Turn off</button></div>'
-    : '<button class="btn btn-start" style="width:100%;margin-bottom:10px" onclick="enableBackgroundReminders()">🔔 Enable Background Reminders</button>';
-
   const defaultReminders = DEFAULT_REMINDERS.map(r => ({...r}));
   defaultReminders.forEach(r => {
     const savedTime = localStorage.getItem('rem_time_' + r.id);
     if (savedTime) r.time = savedTime;
   });
 
-  const itemsHtml = defaultReminders.map(r => {
+  document.getElementById('reminder-list').innerHTML = defaultReminders.map(r => {
     const saved = localStorage.getItem('rem_on_' + r.id);
     const isOn = saved === '1';
     return `
@@ -1091,14 +1058,11 @@ function renderReminders() {
       </div>
     `;
   }).join('');
-
-  document.getElementById('reminder-list').innerHTML = statusHtml + itemsHtml;
 }
 
 function updateReminderTime(id, newTime) {
   localStorage.setItem('rem_time_' + id, newTime);
   renderReminders();
-  syncRemindersToBackend();
 }
 
 function toggleReminder(el) {
@@ -1107,24 +1071,31 @@ function toggleReminder(el) {
   const isOn = el.classList.contains('on');
   localStorage.setItem('rem_on_' + id, isOn ? '1' : '0');
   if (isOn && 'Notification' in window) Notification.requestPermission();
-  syncRemindersToBackend();
 }
+
+// Remembers which reminders already fired this minute, so the 1s interval
+// doesn't need to land exactly on second 0 (which it often misses).
+const firedReminders = new Set();
 
 function checkReminders() {
   const now = new Date();
   const h = String(now.getHours()).padStart(2, '0');
   const m = String(now.getMinutes()).padStart(2, '0');
   const timeStr = h + ':' + m;
-  if (now.getSeconds() !== 0) return;
 
   DEFAULT_REMINDERS.forEach(r => {
     const savedTime = localStorage.getItem('rem_time_' + r.id);
     const checkTime = savedTime || r.time;
     const isOn = localStorage.getItem('rem_on_' + r.id) === '1';
+    const fireKey = r.id + '_' + getLocalDateStr() + '_' + timeStr;
+    if (firedReminders.has(fireKey)) return;
     if (isOn && checkTime === timeStr && 'Notification' in window && Notification.permission === 'granted') {
+      firedReminders.add(fireKey);
       try { new Notification('⏰ ' + r.title, {body: 'Time to study!'}); } catch(e) {}
     }
   });
+  // Keep the set from growing forever.
+  if (firedReminders.size > 50) firedReminders.clear();
 }
 
 function renderSubjects() {
@@ -1142,8 +1113,8 @@ function loadLectures() {
   const container = document.getElementById('lecture-list');
   if (!subjId) { container.innerHTML = '<div class="empty-state"><p>Select a subject</p></div>'; return; }
   const subj = subjectsData.find(s => s.id === subjId);
-  const next = getNextLecture();
-  const nextLecNum = next && next.subject === subjId ? next.lec : null;
+  const nextIdxInSubj = subj.lectures.findIndex(l => !l.done);
+  const nextLecNum = nextIdxInSubj !== -1 ? subj.lectures[nextIdxInSubj].n : null;
   container.innerHTML = subj.lectures.map((l, i) => {
     const isNext = l.n === nextLecNum;
     const locked = !l.done && !isNext;
@@ -1154,18 +1125,18 @@ function loadLectures() {
 async function toggleLecture(subjId, idx) {
   const subj = subjectsData.find(s => s.id === subjId);
   const lec = subj.lectures[idx];
-  const next = getNextLecture();
-  if (next && next.subject === subjId && next.lec === lec.n) {
-    // OK - this is the next lecture in sequence
-  } else if (!lec.done) {
+  const nextIdxInSubj = subj.lectures.findIndex(l => !l.done);
+  const isNextInSubj = nextIdxInSubj !== -1 && subj.lectures[nextIdxInSubj].n === lec.n;
+  if (!isNextInSubj && !lec.done) {
     alert('Lectures unlock in order - finish the current one first.');
     return;
   }
   lec.done = !lec.done;
   subj.completed = subj.lectures.filter(l => l.done).length;
   await saveProgress(subjId, lec.n, lec.done);
-  if (lec.done && next && next.subject === subjId && next.lec === lec.n) {
+  if (lec.done && isNextInSubj) {
     await saveStreak(getLocalDateStr());
+    localStorage.setItem('active_subject', subjId); // marking progress here makes this the current focus
   }
   updateStats();
   renderTodayLecture();
@@ -1312,9 +1283,12 @@ async function renderStats() {
   // Quiz performance broken down by subject, plus a weak-spot callout.
   const quizBySubject = {};
   quizzes.forEach(q => {
-    if (!quizBySubject[q.subject]) quizBySubject[q.subject] = {pctSum: 0, count: 0};
-    quizBySubject[q.subject].pctSum += (q.total > 0 ? (q.score / q.total) * 100 : 0);
-    quizBySubject[q.subject].count += 1;
+    // Normalize to subject id (older records stored the display name).
+    const match = subjectsData.find(x => x.id === q.subject || x.name === q.subject);
+    const key = match ? match.id : q.subject;
+    if (!quizBySubject[key]) quizBySubject[key] = {pctSum: 0, count: 0};
+    quizBySubject[key].pctSum += (q.total > 0 ? (q.score / q.total) * 100 : 0);
+    quizBySubject[key].count += 1;
   });
   const quizSubjIds = Object.keys(quizBySubject);
   if (quizSubjIds.length > 0) {
@@ -1388,7 +1362,10 @@ async function renderStats() {
     const pct = Math.round((completed / 5) * 100);
     days.push({date: dateStr, pct, day: d.getDate()});
   }
-  heatmap.innerHTML = days.map(d => {
+  // Pad the first week so each column is the same weekday (Mon-Sun).
+  const firstDate = new Date(); firstDate.setDate(firstDate.getDate() - 29);
+  const leadBlanks = (firstDate.getDay() + 6) % 7;
+  heatmap.innerHTML = '<div class="heatmap-day" style="visibility:hidden"></div>'.repeat(leadBlanks) + days.map(d => {
     let cls = '';
     if (d.pct === 100) cls = 'has-data';
     else if (d.pct > 0) cls = 'has-data partial';
@@ -1421,11 +1398,59 @@ async function renderStats() {
   `;
 }
 
+// ── Backup & Restore ────────────────────────────────────────────────
+const BACKUP_STORES = ['progress', 'streak', 'quiz', 'weekly', 'revision', 'sessions'];
+const BACKUP_SKIP_LS = ['session_timer_state'];
+
+async function exportData() {
+  try {
+    const data = {app: 'study-tracker', version: 3, exportedAt: new Date().toISOString(), stores: {}, localStorage: {}};
+    for (const name of BACKUP_STORES) {
+      data.stores[name] = await dbPromise(name, 'readonly', s => s.getAll());
+    }
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!BACKUP_SKIP_LS.includes(k)) data.localStorage[k] = localStorage.getItem(k);
+    }
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'study-tracker-backup-' + getLocalDateStr() + '.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch (e) {
+    alert('Export failed: ' + (e && e.message ? e.message : e));
+  }
+}
+
+async function importData(event) {
+  const file = event.target.files && event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+  if (!confirm('Restore this backup? It will OVERWRITE your current data in this browser.')) return;
+  try {
+    const data = JSON.parse(await file.text());
+    if (!data || !data.stores) { alert('This does not look like a tracker backup file.'); return; }
+    for (const name of BACKUP_STORES) {
+      const rows = data.stores[name];
+      if (!Array.isArray(rows)) continue;
+      await dbPromise(name, 'readwrite', s => s.clear());
+      for (const row of rows) await dbPromise(name, 'readwrite', s => s.put(row));
+    }
+    if (data.localStorage && typeof data.localStorage === 'object') {
+      Object.keys(data.localStorage).forEach(k => {
+        if (!BACKUP_SKIP_LS.includes(k)) localStorage.setItem(k, data.localStorage[k]);
+      });
+    }
+    alert('Backup restored! The page will now reload.');
+    location.reload();
+  } catch (e) {
+    alert('Restore failed: ' + (e && e.message ? e.message : e));
+  }
+}
+
 async function init() {
   try {
-    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-      navigator.serviceWorker.register('/sw.js').catch(e => console.log('SW registration skipped:', e.message));
-    }
     await initDB();
     await loadProgress();
     updateStats();
@@ -1438,7 +1463,7 @@ async function init() {
     renderWeeklyTest();
     renderReminders();
     setInterval(checkReminders, 1000);
-    if ('Notification' in window) Notification.requestPermission();
+    // Notification permission is requested when the user turns a reminder on.
 
     window.addEventListener('resize', () => {
       clearTimeout(resizeTimeout);
